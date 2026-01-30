@@ -17,6 +17,10 @@ async def send_violation_alert(bot_token, chat_id, image_path, violations):
         image_path: Path to violation screenshot
         violations: List of detected violations
     """
+    if not violations:
+        print("⚠️ No violations to report")
+        return
+    
     try:
         bot = telegram.Bot(token=bot_token)
         
@@ -25,7 +29,7 @@ async def send_violation_alert(bot_token, chat_id, image_path, violations):
         violation_summary = ', '.join(set(violation_types))
         
         message = f"""
-⚠️ **SAFETY VIOLATION DETECTED** ⚠️
+⚠️ *SAFETY VIOLATION DETECTED* ⚠️
 
 🕒 Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 📍 Type: {violation_summary}
@@ -35,7 +39,7 @@ async def send_violation_alert(bot_token, chat_id, image_path, violations):
         """
         
         # Send photo with caption
-        if Path(image_path).exists():
+        if image_path and Path(image_path).exists():
             with open(image_path, 'rb') as photo:
                 await bot.send_photo(
                     chat_id=chat_id,
@@ -47,8 +51,12 @@ async def send_violation_alert(bot_token, chat_id, image_path, violations):
         else:
             print(f"❌ Screenshot not found: {image_path}")
             
+    except telegram.error.TelegramError as e:
+        print(f"❌ Telegram error: {e}")
+    except FileNotFoundError:
+        print(f"❌ Screenshot file not found: {image_path}")
     except Exception as e:
-        print(f"❌ Failed to send Telegram alert: {e}")
+        print(f"❌ Unexpected error sending alert: {e}")
 
 async def test_telegram_connection(bot_token, chat_id):
     """Test Telegram bot connection"""
@@ -60,6 +68,9 @@ async def test_telegram_connection(bot_token, chat_id):
         )
         print("✅ Telegram connection successful!")
         return True
-    except Exception as e:
+    except telegram.error.TelegramError as e:
         print(f"❌ Telegram connection failed: {e}")
+        return False
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
         return False

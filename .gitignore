@@ -71,10 +71,6 @@ output/violations/*
 # Logs
 *.log
 
-# Config with sensitive data
-config/config.yaml
-!config/config.yaml
-
 # System
 .DS_Store
 Thumbs.db

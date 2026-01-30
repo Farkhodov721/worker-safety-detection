@@ -60,11 +60,14 @@ def draw_boxes(frame, results, violations):
 
 def save_violation_screenshot(frame, violations, output_dir):
     """Save screenshot of violation"""
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     filename = f"violation_{timestamp}.jpg"
     output_path = Path(output_dir) / filename
     
-    cv2.imwrite(str(output_path), frame)
-    print(f"📸 Screenshot saved: {output_path}")
-    
-    return str(output_path)
+    success = cv2.imwrite(str(output_path), frame)
+    if success:
+        print(f"📸 Screenshot saved: {output_path}")
+        return str(output_path)
+    else:
+        print(f"❌ Failed to save screenshot: {output_path}")
+        return None

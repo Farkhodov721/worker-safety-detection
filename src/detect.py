@@ -68,6 +68,8 @@ class SafetyDetector:
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         
         # Setup video writer
+        out = None
+        output_path = None
         if self.config['video']['save_output']:
             output_path = Path(self.config['video']['output_path']) / f"output_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -76,67 +78,69 @@ class SafetyDetector:
         frame_count = 0
         violation_count = 0
         
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                break
-            
-            frame_count += 1
-            
-            # Run detection
-            results = self.model(frame, conf=self.config['detection']['confidence_threshold'])
-            
-            # Check for violations
-            violations = self.detect_violations(results)
-            
-            # Draw boxes on frame
-            annotated_frame = draw_boxes(frame, results[0], violations)
-            
-            # Handle violations
-            if violations:
-                violation_count += 1
-                print(f"Frame {frame_count}: {len(violations)} violation(s) detected")
-                
-                # Save screenshot
-                if self.config['alerts']['save_screenshots']:
-                    screenshot_path = save_violation_screenshot(
-                        annotated_frame, 
-                        violations,
-                        self.config['alerts']['screenshot_path']
-                    )
-                
-                # Send Telegram alert (with cooldown)
-                if self.config['telegram']['enable_alerts']:
-                    current_time = datetime.now()
-                    if self.last_alert_time is None or (current_time - self.last_alert_time) > self.min_alert_interval:
-                        asyncio.run(send_violation_alert(
-                            self.config['telegram']['bot_token'],
-                            self.config['telegram']['chat_id'],
-                            screenshot_path,
-                            violations
-                        ))
-                        self.last_alert_time = current_time
-            
-            # Save output video
-            if self.config['video']['save_output']:
-                out.write(annotated_frame)
-            
-            # Show preview (optional)
-            if self.config['video']['show_preview']:
-                cv2.imshow('Safety Detection', annotated_frame)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
+        try:
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
                     break
-        
-        # Cleanup
-        cap.release()
-        if self.config['video']['save_output']:
-            out.release()
-        cv2.destroyAllWindows()
+                
+                frame_count += 1
+                
+                # Run detection
+                results = self.model(frame, conf=self.config['detection']['confidence_threshold'])
+                
+                # Check for violations
+                violations = self.detect_violations(results)
+                
+                # Draw boxes on frame
+                annotated_frame = draw_boxes(frame, results[0], violations)
+                
+                # Handle violations
+                if violations:
+                    violation_count += 1
+                    print(f"Frame {frame_count}: {len(violations)} violation(s) detected")
+                    
+                    # Save screenshot
+                    screenshot_path = None
+                    if self.config['alerts']['save_screenshots']:
+                        screenshot_path = save_violation_screenshot(
+                            annotated_frame, 
+                            violations,
+                            self.config['alerts']['screenshot_path']
+                        )
+                    
+                    # Send Telegram alert (with cooldown)
+                    if self.config['telegram']['enable_alerts'] and screenshot_path:
+                        current_time = datetime.now()
+                        if self.last_alert_time is None or (current_time - self.last_alert_time) > self.min_alert_interval:
+                            asyncio.run(send_violation_alert(
+                                self.config['telegram']['bot_token'],
+                                self.config['telegram']['chat_id'],
+                                screenshot_path,
+                                violations
+                            ))
+                            self.last_alert_time = current_time
+                
+                # Save output video
+                if self.config['video']['save_output'] and out is not None:
+                    out.write(annotated_frame)
+                
+                # Show preview (optional)
+                if self.config['video']['show_preview']:
+                    cv2.imshow('Safety Detection', annotated_frame)
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
+        finally:
+            # Cleanup
+            cap.release()
+            if out is not None:
+                out.release()
+            cv2.destroyAllWindows()
         
         print(f"\n=== Detection Complete ===")
         print(f"Total frames processed: {frame_count}")
         print(f"Frames with violations: {violation_count}")
-        print(f"Output saved to: {output_path if self.config['video']['save_output'] else 'Not saved'}")
+        print(f"Output saved to: {output_path if output_path else 'Not saved'}")
 
 def main():
     """Main entry point"""
