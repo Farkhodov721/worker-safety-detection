@@ -1,0 +1,46 @@
+# Telegram Bot Configuration
+telegram:
+  bot_token: "YOUR_BOT_TOKEN_HERE"  # Get from @BotFather
+  chat_id: "YOUR_CHAT_ID_HERE"      # Your Telegram chat ID
+  enable_alerts: true
+
+# Detection Configuration
+detection:
+  model_path: "models/yolov8n.pt"
+  confidence_threshold: 0.5
+  iou_threshold: 0.45
+  
+# Video Processing
+video:
+  input_path: "data/videos/test.mp4"
+  output_path: "output/videos/"
+  save_output: true
+  show_preview: false
+
+# Violation Detection
+violations:
+  check_helmet: true
+  check_vest: true
+  check_mask: true
+  check_glasses: true
+  
+  # Classes that indicate violations
+  violation_classes:
+    - "no-helmet"
+    - "no-safety-vest"
+    - "no-mask"
+    - "no-safety-glasses"
+  
+  # Classes that indicate compliance
+  safe_classes:
+    - "helmet"
+    - "safety-vest"
+    - "mask"
+    - "safety-glasses"
+    - "person"
+
+# Alert Configuration
+alerts:
+  save_screenshots: true
+  screenshot_path: "output/violations/"
+  min_time_between_alerts: 5  # seconds
